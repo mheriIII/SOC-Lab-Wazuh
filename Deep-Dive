@@ -1,0 +1,45 @@
+Technical Deep Dive
+1. The Telemetry Pipeline (Log Ingestion Logic)
+I didn't just "connect" the machines; I built a data pipeline.
+
+The Agent Side: On the Windows 11 host, the Wazuh Agent (wazuh-agent.exe) acts as a lightweight log shipper. I configured it to monitor the Security channel of the Windows Event Logs.
+
+The Transport: The logs are encrypted and sent over AES-256 via Port 1514.
+
+The Manager Side: The Wazuh Manager uses Decoders to break down the raw XML from Windows (Event ID 4625) and Rules to assign a severity level.
+
+Example: I observed that a single failed login is a Level 3, but 10 failures in 60 seconds triggers Rule 60122, which is a Level 10. This is the "correlation engine" in action.
+
+2. Networking & Protocol Negotiation
+During the attack phase, I encountered a "Signing: False" error with SMB.
+
+The Problem: Modern Windows 11 requires SMB Signing for security. When my Kali machine (NetExec) tried to connect, the "handshake" failed.
+
+The Solution: I performed a "Controlled Softening" of the Windows security posture for the lab. I used PowerShell to modify the registry:
+
+PowerShell
+Set-SmbServerConfiguration -RequireSecuritySignature $false
+The Result: This allowed the brute-force packets to actually reach the authentication module, ensuring the SOC could see the attempt. In a real-world scenario, this taught me that attackers look for "Legacy" configurations exactly like this.
+
+3. Overcoming "Unattended" VirtualBox Errors
+A major hurdle was the VERR_PATH_NOT_FOUND error in VirtualBox.
+
+Root Cause Analysis: VirtualBox's "Unattended Guest OS Install" creates a temporary .viso file (a virtual floppy) to pass credentials to Windows. Because I moved the VM files during the lab, the "pathing" broke.
+
+Resolution: I manually detached the Unattended-aux-iso.viso from the SATA controller and cleared the VBoxIsoMaker cache.
+
+Takeaway: This experience taught me how VirtualBox handles helper files and the importance of manual hardware configuration over "automated" wizards.
+
+4. Advanced Detection Engineering (MITRE Mapping)
+I spent time analyzing why my dashboard lit up the way it did.
+
+Tactical Analysis of "Impact": When I ran Set-NetFirewallProfile -Enabled False, Wazuh didn't just see a command; it saw an Inhibiting of Security Functionality.
+
+Detection Logic: This mapped to MITRE T1562. By seeing this in my lab, I learned that a SOC analyst shouldn't just look for "Hacker Tools," but also for "Legitimate tools used for Malicious purposes."
+
+Final Lab Statistics
+Average Events Per Second (EPS): ~15-20 during attack simulations.
+
+Storage Growth: Observed ~200MB of log data growth per hour of active testing.
+
+Detection Latency: Time from Kali attack command to Wazuh Dashboard alert: < 12 seconds.

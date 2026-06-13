@@ -1,7 +1,3 @@
-# SOC-Lab-Wazuh
-To get your GitHub repo looking like a professional cybersecurity portfolio, you need to combine the technical steps you took with the "proof" (your screenshots).
-
-Below is a complete, copy-paste ready README.md structure. It includes the specific troubleshooting we did together, which is what will actually impress a hiring manager.
 
 Home SOC Lab: Wazuh SIEM Deployment & Attack Simulation
 📋 Project Overview
